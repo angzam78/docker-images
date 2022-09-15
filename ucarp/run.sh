@@ -20,7 +20,7 @@ shutdown() {
   kill $PID
   sleep 1
   echo "Sending KILL to ucarp" # we need to make sure everything is dead before
-  kill -9 $PID                 # ucarp might promote itself to master afer 3s again
+  kill -9 $PID                 # ucarp might promote itself to master after 3s again
   exit $RET
 }
 
