@@ -1,0 +1,153 @@
+kernel:
+  image: linuxkit/kernel:5.6.11-db4bb0a764332e161ac1df8eb2e5b9de183bc87f-amd64
+  cmdline: "console=tty0"
+init:
+  - linuxkit/init:8f1e6a0747acbbb4d7e24dc98f97faa8d1c6cec7
+  - linuxkit/runc:bf1e0c61fb4678d6428d0aabbd80db5ea24e4d4d
+  - linuxkit/containerd:de1b18eed76a266baa3092e5c154c84f595e56da
+  - linuxkit/ca-certificates:c1c73ef590dffb6a0138cf758fe4a4305c9864f4
+onboot:
+  - name: sysctl
+    image: linuxkit/sysctl:bdc99eeedc224439ff237990ee06e5b992c8c1ae
+  - name: sysfs
+    image: linuxkit/sysfs:c3bdb00c5e23bf566d294bafd5f7890ca319056f
+  - name: rngd1
+    image: linuxkit/rngd:4f85d8de3f6f45973a8c88dc8fba9ec596e5495a
+    command: ["/sbin/rngd", "-1"]
+  - name: format
+    image: linuxkit/format:7efa07559dd23cb4dbebfd3ab48c50fd33625918
+  - name: mount
+    image: linuxkit/mount:422b219bb1c7051096126ac83e6dcc8b2f3f1176
+    command: ["/usr/bin/mountie", "/var/lib/docker"]
+services:
+  - name: getty
+    image: linuxkit/getty:76951a596aa5e0867a38e28f0b94d620e948e3e8
+    env:
+     - INSECURE=true
+  - name: rngd
+    image: linuxkit/rngd:4f85d8de3f6f45973a8c88dc8fba9ec596e5495a
+  - name: dhcpcd
+    image: linuxkit/dhcpcd:52d2c4df0311b182e99241cdc382ff726755c450
+  - name: ntpd
+    image: linuxkit/openntpd:d6c36ac367ed26a6eeffd8db78334d9f8041b038
+  - name: sshd
+    image: linuxkit/sshd:4696ba61c3ec091328e1c14857d77e675802342f
+  - name: docker
+    image: docker:20.10.6-dind
+    capabilities:
+     - all
+    net: host
+    mounts:
+     - type: cgroup
+       options: ["rw","nosuid","noexec","nodev","relatime"]
+    binds:
+     - /etc/resolv.conf:/etc/resolv.conf
+     - /var/lib/docker:/var/lib/docker
+     - /lib/modules:/lib/modules
+     - /etc/docker/daemon.json:/etc/docker/daemon.json
+    command: ["/usr/local/bin/docker-init", "/usr/local/bin/dockerd"]
+files:
+  - path: var/lib/docker
+    directory: true
+  - path: etc/docker/daemon.json
+    contents: '{"debug": true}'
+  - path: root/.ssh/authorized_keys
+    mode: "0600"
+    optional: true
+    contents: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC8+N80pKix1zFTVUq2nNO1NjIX+yAEYVwsKGg0OJ5H6gvd1lbEJ5FxAVz1uMY+i7bbIWEBG6YTx0Hap3O1XoNSFGUcutmc8z02F+EvtM1IVIV3MA6CW11QDPKY1RftD2JVr2gIPo3S3SkqbKqpeD+pkJvfXM03M/b8NCSdYC2WICp9ubylnzLQ/3TRKh30qKxWdUdFAOVsfFf6u0PS4rhh36mjxnTb0J5Os9r+Yrd7gi3Y/Ejv3xbfhqM2N4VJjWYj3hBfv7Um2f4KL54UzmenNVO6RiqtYehirGv7noJj/iTgPLcTuonPlv4Dq5UxkSdSiqgvtqEJfEf02cP2tzBFioPgkKQO3b23W0tBEqii8W+DJIMz+rbKD/mysoWwtPFj5G9HxTZE8mnIuByxd+OOSL5nUZndC2zzLACEoJ2jJ5n8Q9lyk3lRvl5aVWqhx1CEgtiuHz7OdmeXeFJUN8SJY0FTHS6YuwROPCRqomVmSOSEbxjxgVHQxCbyoa1YLFs= root@linuxkit'
+  - path: /etc/ssh/ssh_host_dsa_key
+    mode: "0600"
+    contents: '-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABsQAAAAdzc2gtZH
+NzAAAAgQCAbCRTcnYhj/LKAuXu18cxCsjFzMs7VxKvVn0GHX8U01Ibil9tqS1RSx/1QhmV
+K+Ewc2QbShEGN6oBLqSaG6dZKTEhCOZi9VzpJwS+cd1dqYJXzYKvTj7/f0X6bJ2NMsbquO
+QfTx+5fUc2ToBLdHyBid8Gw76S/9QUW2NWYdGBoQAAABUAvvB91yxco11CqpIjKRpahNMK
+/h8AAACAHlcc7RVrQaOJh3whIVRqo0bWnihZtA840nEyvrRFAvhp1ASjI8vokwmuKu2BKb
+qjNX4aR6s2nGtkZRHPayYQeT4M0eoVcKq3pP7XEwpwadWgrJz45/nV4Fpmij1mE2w4HJb7
+mhrgXC21ucnRg/KIoeelYHRwKFL/+1VKRhBlczkAAACAO1v1JXWA+eTEpeH24TFLY/Odhb
+Rbimm0dhvHHuwxCr2cDSGJyaLv8lKZTAbYKrfA9nim0wJeVJcWoPXARD4agKu5pSRdq+0t
+12QQOuh289qJ30jqQ1M5JzE2ij9PGN6eE/srMa4wuq9xbLzymYDq8sS2l7XMqLw62KWwHj
+ITso8AAAHw4bQ8reG0PK0AAAAHc3NoLWRzcwAAAIEAgGwkU3J2IY/yygLl7tfHMQrIxczL
+O1cSr1Z9Bh1/FNNSG4pfbaktUUsf9UIZlSvhMHNkG0oRBjeqAS6kmhunWSkxIQjmYvVc6S
+cEvnHdXamCV82Cr04+/39F+mydjTLG6rjkH08fuX1HNk6AS3R8gYnfBsO+kv/UFFtjVmHR
+gaEAAAAVAL7wfdcsXKNdQqqSIykaWoTTCv4fAAAAgB5XHO0Va0GjiYd8ISFUaqNG1p4oWb
+QPONJxMr60RQL4adQEoyPL6JMJrirtgSm6ozV+GkerNpxrZGURz2smEHk+DNHqFXCqt6T+
+1xMKcGnVoKyc+Of51eBaZoo9ZhNsOByW+5oa4FwttbnJ0YPyiKHnpWB0cChS//tVSkYQZX
+M5AAAAgDtb9SV1gPnkxKXh9uExS2PznYW0W4pptHYbxx7sMQq9nA0hicmi7/JSmUwG2Cq3
+wPZ4ptMCXlSXFqD1wEQ+GoCruaUkXavtLddkEDrodvPaid9I6kNTOScxNoo/TxjenhP7Kz
+GuMLqvcWy88pmA6vLEtpe1zKi8OtilsB4yE7KPAAAAFQCcKLBcEhpNQboHGqKNXTO0UMzk
+vwAAABpyb290QGxpbnV4a2l0LTkwMWIwZWI5ODMxOQ==
+-----END OPENSSH PRIVATE KEY-----'
+  - path: /etc/ssh/ssh_host_dsa_key.pub
+    mode: "0644"
+    contents: 'ssh-dss AAAAB3NzaC1kc3MAAACBAIBsJFNydiGP8soC5e7XxzEKyMXMyztXEq9WfQYdfxTTUhuKX22pLVFLH/VCGZUr4TBzZBtKEQY3qgEupJobp1kpMSEI5mL1XOknBL5x3V2pglfNgq9OPv9/RfpsnY0yxuq45B9PH7l9RzZOgEt0fIGJ3wbDvpL/1BRbY1Zh0YGhAAAAFQC+8H3XLFyjXUKqkiMpGlqE0wr+HwAAAIAeVxztFWtBo4mHfCEhVGqjRtaeKFm0DzjScTK+tEUC+GnUBKMjy+iTCa4q7YEpuqM1fhpHqzaca2RlEc9rJhB5PgzR6hVwqrek/tcTCnBp1aCsnPjn+dXgWmaKPWYTbDgclvuaGuBcLbW5ydGD8oih56VgdHAoUv/7VUpGEGVzOQAAAIA7W/UldYD55MSl4fbhMUtj852FtFuKabR2G8ce7DEKvZwNIYnJou/yUplMBtgqt8D2eKbTAl5Ulxag9cBEPhqAq7mlJF2r7S3XZBA66Hbz2onfSOpDUzknMTaKP08Y3p4T+ysxrjC6r3FsvPKZgOryxLaXtcyovDrYpbAeMhOyjw== root@linuxkit-901b0eb98319'
+  - path: /etc/ssh/ssh_host_ecdsa_key
+    mode: "0600"
+    contents: '-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAaAAAABNlY2RzYS
+1zaGEyLW5pc3RwMjU2AAAACG5pc3RwMjU2AAAAQQQhm2BCkF1+w7Y3ydop76BqvxAP6WlU
+E3wqweA4S2MPjX88VzzlO6ujcCCbP0uUpYTwkJN7+drGDbL/nGUqcs38AAAAuCSlqxEkpa
+sRAAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCGbYEKQXX7DtjfJ
+2invoGq/EA/paVQTfCrB4DhLYw+NfzxXPOU7q6NwIJs/S5SlhPCQk3v52sYNsv+cZSpyzf
+wAAAAgCkvTnee7czoIq5B5J7yWuVfQibwO56wFQafE1ehXqioAAAAacm9vdEBsaW51eGtp
+dC05MDFiMGViOTgzMTkBAgMEBQY=
+-----END OPENSSH PRIVATE KEY-----'
+  - path: /etc/ssh/ssh_host_ecdsa_key.pub
+    mode: "0644"
+    contents: 'ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCGbYEKQXX7DtjfJ2invoGq/EA/paVQTfCrB4DhLYw+NfzxXPOU7q6NwIJs/S5SlhPCQk3v52sYNsv+cZSpyzfw= root@linuxkit-901b0eb98319'
+  - path: /etc/ssh/ssh_host_ed25519_key
+    mode: "0600"
+    contents: '-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACBRo+HwxiEDE+RHze8M/O4dogb96HLwjrT0PznhjRi78QAAAKCBRq0WgUat
+FgAAAAtzc2gtZWQyNTUxOQAAACBRo+HwxiEDE+RHze8M/O4dogb96HLwjrT0PznhjRi78Q
+AAAECoerghKdOywm8j7rdwhIWXHxZKcOpPKyyHhUGphvH3d1Gj4fDGIQMT5EfN7wz87h2i
+Bv3ocvCOtPQ/OeGNGLvxAAAAGnJvb3RAbGludXhraXQtOTAxYjBlYjk4MzE5AQID
+-----END OPENSSH PRIVATE KEY-----'
+  - path: /etc/ssh/ssh_host_ed25519_key.pub
+    mode: "0644"
+    contents: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFGj4fDGIQMT5EfN7wz87h2iBv3ocvCOtPQ/OeGNGLvx root@linuxkit-901b0eb98319'
+  - path: /etc/ssh/ssh_host_rsa_key
+    mode: "0600"
+    contents: '-----BEGIN OPENSSH PRIVATE KEY-----
+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
+-----END OPENSSH PRIVATE KEY-----'
+  - path: /etc/ssh/ssh_host_rsa_key.pub
+    mode: "0644"
+    contents: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDABWAtUIrVhOIcwUxeV/dOXlN4yc8fHpLlpneprxhEggsLGV9VQ9pEYZ1PTPchtfU3fzL3DOzAbGFwrbaNX3/i0MhJjG7+Ph9O91Kj/oHENCIu8S2+trTCujrDtc/biZcX5Wv0cV45rwfh5N+fx1LMTQU16EyOTwX21R8AKRSwKbf2M/MBEA604esSIRCOT+y4q9inb9VaiZthxvkdNlsN1I2uEIg1KX4iHBrWpduestlzIuVeYcz9lszy4Qxj+SCCla7PCBGz9jn0FHPNafxFQeWq6Ooujn3LfVBaVjmYCqWWnGWRhoJtexEpKeuBBDdDvNfBleRbyLtD34FZ07HoLjks1/diZyH6c0nadPhgpgLhOkJ/rYY58nZ9VvTtD3k6PfYDek5ZYIWAacD+6e0Vii/9rL8cD6iKLbQJEFaz/8LubW2F8KNC5DuRilldfRdACw+Bg4U3xFU0P0BimpkIlgw8Ji361HnFftNPLdGcqmNIulqNaBnSMp4D4BYegqU= root@linuxkit-901b0eb98319'
+    
